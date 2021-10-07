@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"os"
 
 	bytes2 "github.com/9elements/converged-security-suite/v2/pkg/bytes"
 )
@@ -51,6 +52,7 @@ func FindEmbeddedFirmwareStructure(firmware Firmware) (*EmbeddedFirmwareStructur
 
 		actualSignature := binary.LittleEndian.Uint32(image[offset:])
 		if actualSignature == EmbeddedFirmwareStructureSignature {
+			fmt.Fprintf(os.Stderr, "Found signature at offset 0x%x\n", offset)
 			result, length, err := ParseEmbeddedFirmwareStructure(bytes.NewBuffer(image[offset:]))
 			return result, bytes2.Range{Offset: offset, Length: length}, err
 		}

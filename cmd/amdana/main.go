@@ -12,7 +12,7 @@ import (
 
 const (
 	// This needed a look at the image; how can we fully automate it?
-	mapping = 0xfff80000
+	mapping = 0xff000000
 )
 
 // this is only for Go - would be 5 lines inline in JS, thanks...

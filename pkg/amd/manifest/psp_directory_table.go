@@ -85,7 +85,7 @@ func (p PSPDirectoryTable) String() string {
 
 // FindPSPDirectoryTable scans firmware for PSPDirectoryTableCookie
 // and treats remaining bytes as PSPDirectoryTable
-func FindPSPDirectoryTable(image []byte) (*PSPDirectoryTable, bytes2.Range, error) {
+func FindPSPDirectoryTable(image []byte, mapping uint64) (*PSPDirectoryTable, bytes2.Range, error) {
 	// there is no predefined address, search through the whole memory
 	cookieBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(cookieBytes, PSPDirectoryTableCookie)
@@ -97,7 +97,7 @@ func FindPSPDirectoryTable(image []byte) (*PSPDirectoryTable, bytes2.Range, erro
 			break
 		}
 
-		table, length, err := ParsePSPDirectoryTable(bytes.NewBuffer(image[idx:]))
+		table, length, err := ParsePSPDirectoryTable(bytes.NewBuffer(image[idx:]), mapping)
 		if err != nil {
 			shift := uint64(idx + len(cookieBytes))
 			image = image[idx+len(cookieBytes):]
@@ -111,7 +111,7 @@ func FindPSPDirectoryTable(image []byte) (*PSPDirectoryTable, bytes2.Range, erro
 }
 
 // ParsePSPDirectoryTable converts input bytes into PSPDirectoryTable
-func ParsePSPDirectoryTable(r io.Reader) (*PSPDirectoryTable, uint64, error) {
+func ParsePSPDirectoryTable(r io.Reader, mapping uint64) (*PSPDirectoryTable, uint64, error) {
 	var table PSPDirectoryTable
 	var totalLength uint64
 
@@ -133,7 +133,7 @@ func ParsePSPDirectoryTable(r io.Reader) (*PSPDirectoryTable, uint64, error) {
 	}
 
 	for idx := uint32(0); idx < table.TotalEntries; idx++ {
-		entry, length, err := ParsePSPDirectoryTableEntry(r)
+		entry, length, err := ParsePSPDirectoryTableEntry(r, mapping)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -144,7 +144,7 @@ func ParsePSPDirectoryTable(r io.Reader) (*PSPDirectoryTable, uint64, error) {
 }
 
 // ParsePSPDirectoryTableEntry converts input bytes into PSPDirectoryTableEntry
-func ParsePSPDirectoryTableEntry(r io.Reader) (*PSPDirectoryTableEntry, uint64, error) {
+func ParsePSPDirectoryTableEntry(r io.Reader, mapping uint64) (*PSPDirectoryTableEntry, uint64, error) {
 	var entry PSPDirectoryTableEntry
 	var length uint64
 
@@ -167,5 +167,6 @@ func ParsePSPDirectoryTableEntry(r io.Reader) (*PSPDirectoryTableEntry, uint64, 
 	if err := readAndCountSize(r, binary.LittleEndian, &entry.LocationOrValue, &length); err != nil {
 		return nil, 0, err
 	}
+	entry.LocationOrValue -= uint64(mapping)
 	return &entry, length, nil
 }

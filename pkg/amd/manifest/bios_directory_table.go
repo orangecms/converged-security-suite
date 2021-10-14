@@ -154,6 +154,9 @@ func ParseBIOSDirectoryTable(r io.Reader) (*BIOSDirectoryTable, uint64, error) {
 		return nil, 0, err
 	}
 
+	if table.TotalEntries > 2000 {
+		return nil, 0, fmt.Errorf("No real BIOSDirectoryTable - too many entries")
+	}
 	table.Entries = make([]BIOSDirectoryTableEntry, 0, table.TotalEntries)
 	for idx := uint32(0); idx < table.TotalEntries; idx++ {
 		entry, length, err := ParseBIOSDirectoryTableEntry(r)

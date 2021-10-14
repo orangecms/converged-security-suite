@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	bytes2 "github.com/9elements/converged-security-suite/v2/pkg/bytes"
@@ -121,7 +122,9 @@ func FindBIOSDirectoryTable(image []byte, mapping uint64) (*BIOSDirectoryTable, 
 			break
 		}
 
+		fmt.Fprintf(os.Stderr, "parse BIOS dir table at 0x%x\n", idx)
 		table, bytesRead, err := ParseBIOSDirectoryTable(bytes.NewBuffer(image[idx:]), mapping)
+		fmt.Fprintf(os.Stderr, "BIOS directories %v\n", table)
 		if err != nil {
 			shift := uint64(idx + len(cookieBytes))
 			image = image[shift:]
@@ -137,6 +140,7 @@ func FindBIOSDirectoryTable(image []byte, mapping uint64) (*BIOSDirectoryTable, 
 func ParseBIOSDirectoryTable(r io.Reader, mapping uint64) (*BIOSDirectoryTable, uint64, error) {
 	var table BIOSDirectoryTable
 	var totalLength uint64
+	fmt.Fprintf(os.Stderr, "read and count size - cookie %v\n", table)
 	if err := readAndCountSize(r, binary.LittleEndian, &table.BIOSCookie, &totalLength); err != nil {
 		return nil, 0, err
 	}
@@ -144,12 +148,15 @@ func ParseBIOSDirectoryTable(r io.Reader, mapping uint64) (*BIOSDirectoryTable, 
 		return nil, 0, fmt.Errorf("incorrect cookie: %d", table.BIOSCookie)
 	}
 
+	fmt.Fprintf(os.Stderr, "read and count size - checksum %v\n", table)
 	if err := readAndCountSize(r, binary.LittleEndian, &table.Checksum, &totalLength); err != nil {
 		return nil, 0, err
 	}
+	fmt.Fprintf(os.Stderr, "read and count size - entries %v\n", table)
 	if err := readAndCountSize(r, binary.LittleEndian, &table.TotalEntries, &totalLength); err != nil {
 		return nil, 0, err
 	}
+	fmt.Fprintf(os.Stderr, "read and count size - reserved %v\n", table)
 	if err := readAndCountSize(r, binary.LittleEndian, &table.Reserved, &totalLength); err != nil {
 		return nil, 0, err
 	}
@@ -157,10 +164,13 @@ func ParseBIOSDirectoryTable(r io.Reader, mapping uint64) (*BIOSDirectoryTable, 
 	if table.TotalEntries > 2000 {
 		return nil, 0, fmt.Errorf("No real BIOSDirectoryTable - too many entries")
 	}
+	fmt.Fprintf(os.Stderr, "current result %v\n", table)
 	table.Entries = make([]BIOSDirectoryTableEntry, 0, table.TotalEntries)
+	fmt.Fprintf(os.Stderr, "parse entries%v\n", table)
 	for idx := uint32(0); idx < table.TotalEntries; idx++ {
 		entry, length, err := ParseBIOSDirectoryTableEntry(r, mapping)
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "error parsing BIOS entry %v\n", idx)
 			return nil, 0, err
 		}
 		table.Entries = append(table.Entries, *entry)

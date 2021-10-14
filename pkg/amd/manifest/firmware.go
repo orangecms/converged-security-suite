@@ -3,6 +3,7 @@ package manifest
 import (
 	"bytes"
 	"fmt"
+	"os"
 
 	bytes2 "github.com/9elements/converged-security-suite/v2/pkg/bytes"
 )
@@ -61,6 +62,7 @@ func parsePSPFirmware(firmware Firmware) (*PSPFirmware, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Fprintf(os.Stderr, "EFS %v\n", efs)
 	result.EmbeddedFirmware = *efs
 	result.EmbeddedFirmwareRange = r
 
@@ -76,17 +78,24 @@ func parsePSPFirmware(firmware Firmware) (*PSPFirmware, error) {
 			pspDirectoryLevel1Range.Length = length
 		}
 	}
+
 	if pspDirectoryLevel1 == nil {
 		pspDirectoryLevel1, pspDirectoryLevel1Range, _ = FindPSPDirectoryTable(image, mapping)
 	}
+	fmt.Fprintf(os.Stderr, "pspDirectoryLevel1 %v\n", pspDirectoryLevel1)
+
 	if pspDirectoryLevel1 != nil {
+		fmt.Fprintf(os.Stderr, "checking for PSPDirectoryLevel2\n")
 		result.PSPDirectoryLevel1 = pspDirectoryLevel1
 		result.PSPDirectoryLevel1Range = pspDirectoryLevel1Range
 
+		imgSize := uint64(len(image))
 		for _, entry := range pspDirectoryLevel1.Entries {
+			fmt.Fprintf(os.Stderr, "entry %v\n", entry)
 			if entry.Type != PSPDirectoryTableLevel2Entry {
 				continue
 			}
+			fmt.Fprintf(os.Stderr, "%v / %v\n", entry.LocationOrValue, imgSize)
 			if entry.LocationOrValue != 0 && entry.LocationOrValue < uint64(len(image)) {
 				pspDirectoryLevel2, length, err := ParsePSPDirectoryTable(bytes.NewBuffer(image[entry.LocationOrValue:]), mapping)
 				if err == nil {
@@ -94,11 +103,14 @@ func parsePSPFirmware(firmware Firmware) (*PSPFirmware, error) {
 					result.PSPDirectoryLevel2Range.Offset = entry.LocationOrValue
 					result.PSPDirectoryLevel2Range.Length = length
 				}
+				fmt.Fprintf(os.Stderr, "%v at %v\n", err, pspDirectoryLevel2)
 			}
+			fmt.Fprintf(os.Stderr, "done %v\n", entry)
 			break
 		}
 	}
 
+	fmt.Fprintf(os.Stderr, "checking for BIOS directories\n")
 	var biosDirectoryLevel1 *BIOSDirectoryTable
 	var biosDirectoryLevel1Range bytes2.Range
 
@@ -109,6 +121,7 @@ func parsePSPFirmware(firmware Firmware) (*PSPFirmware, error) {
 		efs.BIOSDirectoryTableFamily17hModels60h3FhPointer,
 	}
 	for _, offset := range biosDirectoryOffsets {
+		fmt.Fprintf(os.Stderr, "offset %v\n", offset)
 		if offset == 0 || int(offset) > len(image) {
 			continue
 		}
@@ -121,10 +134,13 @@ func parsePSPFirmware(firmware Firmware) (*PSPFirmware, error) {
 		biosDirectoryLevel1Range.Length = length
 		break
 	}
+	fmt.Fprintf(os.Stderr, "BIOS directories %v\n", biosDirectoryLevel1)
 
 	if biosDirectoryLevel1 == nil {
+		fmt.Fprintf(os.Stderr, "rescan for BIOS directories\n")
 		biosDirectoryLevel1, biosDirectoryLevel1Range, _ = FindBIOSDirectoryTable(image, mapping)
 	}
+	fmt.Fprintf(os.Stderr, "BIOS directories %v\n", biosDirectoryLevel1)
 
 	if biosDirectoryLevel1 != nil {
 		result.BIOSDirectoryLevel1 = biosDirectoryLevel1

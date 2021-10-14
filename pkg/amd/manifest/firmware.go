@@ -64,18 +64,20 @@ func parsePSPFirmware(firmware Firmware) (*PSPFirmware, error) {
 	result.EmbeddedFirmware = *efs
 	result.EmbeddedFirmwareRange = r
 
+	mapping := firmware.OffsetToPhysAddr(0)
+
 	var pspDirectoryLevel1 *PSPDirectoryTable
 	var pspDirectoryLevel1Range bytes2.Range
 	if efs.PSPDirectoryTablePointer != 0 && efs.PSPDirectoryTablePointer < uint32(len(image)) {
 		var length uint64
-		pspDirectoryLevel1, length, err = ParsePSPDirectoryTable(bytes.NewBuffer(image[efs.PSPDirectoryTablePointer:]))
+		pspDirectoryLevel1, length, err = ParsePSPDirectoryTable(bytes.NewBuffer(image[efs.PSPDirectoryTablePointer:]), mapping)
 		if err == nil {
 			pspDirectoryLevel1Range.Offset = uint64(efs.PSPDirectoryTablePointer)
 			pspDirectoryLevel1Range.Length = length
 		}
 	}
 	if pspDirectoryLevel1 == nil {
-		pspDirectoryLevel1, pspDirectoryLevel1Range, _ = FindPSPDirectoryTable(image)
+		pspDirectoryLevel1, pspDirectoryLevel1Range, _ = FindPSPDirectoryTable(image, mapping)
 	}
 	if pspDirectoryLevel1 != nil {
 		result.PSPDirectoryLevel1 = pspDirectoryLevel1
@@ -86,7 +88,7 @@ func parsePSPFirmware(firmware Firmware) (*PSPFirmware, error) {
 				continue
 			}
 			if entry.LocationOrValue != 0 && entry.LocationOrValue < uint64(len(image)) {
-				pspDirectoryLevel2, length, err := ParsePSPDirectoryTable(bytes.NewBuffer(image[entry.LocationOrValue:]))
+				pspDirectoryLevel2, length, err := ParsePSPDirectoryTable(bytes.NewBuffer(image[entry.LocationOrValue:]), mapping)
 				if err == nil {
 					result.PSPDirectoryLevel2 = pspDirectoryLevel2
 					result.PSPDirectoryLevel2Range.Offset = entry.LocationOrValue
@@ -111,7 +113,7 @@ func parsePSPFirmware(firmware Firmware) (*PSPFirmware, error) {
 			continue
 		}
 		var length uint64
-		biosDirectoryLevel1, length, err = ParseBIOSDirectoryTable(bytes.NewBuffer(image[offset:]))
+		biosDirectoryLevel1, length, err = ParseBIOSDirectoryTable(bytes.NewBuffer(image[offset:]), mapping)
 		if err != nil {
 			continue
 		}
@@ -121,7 +123,7 @@ func parsePSPFirmware(firmware Firmware) (*PSPFirmware, error) {
 	}
 
 	if biosDirectoryLevel1 == nil {
-		biosDirectoryLevel1, biosDirectoryLevel1Range, _ = FindBIOSDirectoryTable(image)
+		biosDirectoryLevel1, biosDirectoryLevel1Range, _ = FindBIOSDirectoryTable(image, mapping)
 	}
 
 	if biosDirectoryLevel1 != nil {
@@ -133,7 +135,7 @@ func parsePSPFirmware(firmware Firmware) (*PSPFirmware, error) {
 				continue
 			}
 			if entry.SourceAddress != 0 && entry.SourceAddress < uint64(len(image)) {
-				biosDirectoryLevel2, length, err := ParseBIOSDirectoryTable(bytes.NewBuffer(image[entry.SourceAddress:]))
+				biosDirectoryLevel2, length, err := ParseBIOSDirectoryTable(bytes.NewBuffer(image[entry.SourceAddress:]), mapping)
 				if err == nil {
 					result.BIOSDirectoryLevel2 = biosDirectoryLevel2
 					result.BIOSDirectoryLevel2Range.Offset = entry.SourceAddress

@@ -107,7 +107,7 @@ func (b BIOSDirectoryTable) String() string {
 
 // FindBIOSDirectoryTable scans firmware for BIOSDirectoryTableCookie
 // and treats remaining bytes as BIOSDirectoryTable
-func FindBIOSDirectoryTable(image []byte) (*BIOSDirectoryTable, bytes2.Range, error) {
+func FindBIOSDirectoryTable(image []byte, mapping uint64) (*BIOSDirectoryTable, bytes2.Range, error) {
 	// there is no predefined address, search through the whole memory
 	var cookieBytes [4]byte
 	binary.LittleEndian.PutUint32(cookieBytes[:], BIOSDirectoryTableCookie)
@@ -119,7 +119,7 @@ func FindBIOSDirectoryTable(image []byte) (*BIOSDirectoryTable, bytes2.Range, er
 			break
 		}
 
-		table, bytesRead, err := ParseBIOSDirectoryTable(bytes.NewBuffer(image[idx:]))
+		table, bytesRead, err := ParseBIOSDirectoryTable(bytes.NewBuffer(image[idx:]), mapping)
 		if err != nil {
 			shift := uint64(idx + len(cookieBytes))
 			image = image[shift:]
@@ -132,7 +132,7 @@ func FindBIOSDirectoryTable(image []byte) (*BIOSDirectoryTable, bytes2.Range, er
 }
 
 // ParseBIOSDirectoryTable converts input bytes into BIOSDirectoryTable
-func ParseBIOSDirectoryTable(r io.Reader) (*BIOSDirectoryTable, uint64, error) {
+func ParseBIOSDirectoryTable(r io.Reader, mapping uint64) (*BIOSDirectoryTable, uint64, error) {
 	var table BIOSDirectoryTable
 	var totalLength uint64
 	if err := readAndCountSize(r, binary.LittleEndian, &table.BIOSCookie, &totalLength); err != nil {
@@ -157,7 +157,7 @@ func ParseBIOSDirectoryTable(r io.Reader) (*BIOSDirectoryTable, uint64, error) {
 	}
 	table.Entries = make([]BIOSDirectoryTableEntry, 0, table.TotalEntries)
 	for idx := uint32(0); idx < table.TotalEntries; idx++ {
-		entry, length, err := ParseBIOSDirectoryTableEntry(r)
+		entry, length, err := ParseBIOSDirectoryTableEntry(r, mapping)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -168,7 +168,7 @@ func ParseBIOSDirectoryTable(r io.Reader) (*BIOSDirectoryTable, uint64, error) {
 }
 
 // ParseBIOSDirectoryTableEntry converts input bytes into BIOSDirectoryTableEntry
-func ParseBIOSDirectoryTableEntry(r io.Reader) (*BIOSDirectoryTableEntry, uint64, error) {
+func ParseBIOSDirectoryTableEntry(r io.Reader, mapping uint64) (*BIOSDirectoryTableEntry, uint64, error) {
 	var entry BIOSDirectoryTableEntry
 	var length uint64
 	if err := readAndCountSize(r, binary.LittleEndian, &entry.Type, &length); err != nil {
@@ -203,5 +203,6 @@ func ParseBIOSDirectoryTableEntry(r io.Reader) (*BIOSDirectoryTableEntry, uint64
 	if err := readAndCountSize(r, binary.LittleEndian, &entry.DestinationAddress, &length); err != nil {
 		return nil, 0, err
 	}
+	entry.SourceAddress -= uint64(mapping)
 	return &entry, length, nil
 }

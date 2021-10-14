@@ -54,6 +54,7 @@ func FindEmbeddedFirmwareStructure(firmware Firmware) (*EmbeddedFirmwareStructur
 		if actualSignature == EmbeddedFirmwareStructureSignature {
 			fmt.Fprintf(os.Stderr, "Found signature at offset 0x%x\n", offset)
 			result, length, err := ParseEmbeddedFirmwareStructure(bytes.NewBuffer(image[offset:]))
+			fmt.Fprintf(os.Stderr, "EFS Length: 0x%x\n", length)
 			return result, bytes2.Range{Offset: offset, Length: length}, err
 		}
 	}

@@ -1,4 +1,4 @@
-module github.com/orangecms/converged-security-suite/v2
+module github.com/orangecms/converged-security-suite
 
 go 1.16
 

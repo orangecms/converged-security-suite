@@ -22,19 +22,14 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/tidwall/pretty v1.0.2
 	github.com/tjfoc/gmsm v1.4.0
-	github.com/u-root/u-root v0.0.0-20210724144310-637617c480d4 // indirect
 	github.com/ulikunitz/xz v0.5.10
 	github.com/xaionaro-go/gosrc v0.0.0-20201124181305-3fdf8476a735
 	github.com/xaionaro-go/unsafetools v0.0.0-20200202162159-021b112c4d30
 	golang.org/x/crypto v0.0.0-20201117144127-c1f2f97bffc9
-	golang.org/x/text v0.3.6 // indirect
 )
 
-require (
-	github.com/9elements/converged-security-suite/v2 v2.6.0
-	github.com/fatih/structtag v1.2.0 // indirect
-)
+require github.com/9elements/converged-security-suite/v2 v2.6.0
 
 replace github.com/9elements/converged-security-suite/v2 => ./
 
-replace github.com/linuxboot/cbfs => github.com/orangecms/cbfs gomodup
+replace github.com/linuxboot/cbfs => github.com/orangecms/cbfs v0.0.0-20211130150506-eec4ac140592
